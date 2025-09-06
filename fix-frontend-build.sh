@@ -1,3 +1,14 @@
+#!/bin/bash
+
+# Fix frontend build issues by updating Dockerfile
+
+echo "🔧 Fixing frontend build issues..."
+
+# Navigate to frontend directory
+cd /opt/eagle-platform/frontend
+
+# Create corrected Dockerfile
+cat > Dockerfile << 'EOF'
 # Multi-stage build for Vue.js production
 FROM node:18-alpine AS build
 
@@ -50,3 +61,19 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
+EOF
+
+echo "✅ Updated Dockerfile with correct dependencies"
+
+# Go back to infra directory
+cd /opt/eagle-platform/infra
+
+echo "🚀 Deploying with fixed frontend..."
+
+# Deploy
+docker compose -f docker-compose.prod.yml up -d --build
+
+echo "✅ Deployment completed!"
+echo ""
+echo "🔍 Check status:"
+docker compose -f docker-compose.prod.yml ps

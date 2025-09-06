@@ -1,13 +1,46 @@
 #!/bin/bash
 
-# Fix missing Dockerfile and nginx.conf in frontend directory
+# Complete fix for Eagle Email Platform deployment issues
 
-echo "🔧 Fixing missing files in frontend directory..."
+set -e
+
+echo "🔧 Starting complete fix for Eagle Email Platform..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if we're in the right directory
+if [ ! -f "docker-compose.prod.yml" ]; then
+    print_error "Please run this script from the infra directory"
+    exit 1
+fi
+
+print_status "Fixing frontend Dockerfile..."
 
 # Navigate to frontend directory
 cd /opt/eagle-platform/frontend
 
-# Create Dockerfile
+# Create corrected Dockerfile
 cat > Dockerfile << 'EOF'
 # Multi-stage build for Vue.js production
 FROM node:18-alpine AS build
@@ -144,14 +177,65 @@ server {
 }
 EOF
 
-echo "✅ Created Dockerfile and nginx.conf in frontend directory"
+print_success "Created Dockerfile and nginx.conf in frontend directory"
 
 # Go back to infra directory
 cd /opt/eagle-platform/infra
 
-echo "🔧 Now trying to deploy..."
+print_status "Fixing docker-compose.prod.yml..."
 
-# Try to deploy
+# Fix docker-compose.prod.yml
+sed -i 's|../eagle|../backend|g' docker-compose.prod.yml
+sed -i '/^version:/d' docker-compose.prod.yml
+
+print_success "Fixed docker-compose.prod.yml"
+
+print_status "Stopping any existing containers..."
+
+# Stop existing containers
+docker compose -f docker-compose.prod.yml down 2>/dev/null || true
+
+print_status "Building and starting services..."
+
+# Build and start services
 docker compose -f docker-compose.prod.yml up -d --build
 
-echo "✅ Deployment completed!"
+print_status "Waiting for services to be ready..."
+sleep 15
+
+# Check if services are running
+print_status "Checking service status..."
+docker compose -f docker-compose.prod.yml ps
+
+# Initialize Laravel application
+print_status "Initializing Laravel application..."
+
+# Generate application key
+docker compose -f docker-compose.prod.yml exec -T backend php artisan key:generate --force
+
+# Run database migrations
+docker compose -f docker-compose.prod.yml exec -T backend php artisan migrate --force
+
+# Cache configuration for production
+docker compose -f docker-compose.prod.yml exec -T backend php artisan config:cache
+docker compose -f docker-compose.prod.yml exec -T backend php artisan route:cache
+docker compose -f docker-compose.prod.yml exec -T backend php artisan view:cache
+
+# Create storage link
+docker compose -f docker-compose.prod.yml exec -T backend php artisan storage:link
+
+# Set proper permissions
+docker compose -f docker-compose.prod.yml exec -T backend chown -R www-data:www-data /var/www/html/storage
+docker compose -f docker-compose.prod.yml exec -T backend chmod -R 755 /var/www/html/storage
+
+print_success "Eagle Email Platform deployment completed successfully!"
+echo ""
+echo "🌐 Your application is available at:"
+echo "   Frontend: https://app.leython.com"
+echo "   Backend API: https://api.leython.com"
+echo ""
+echo "📊 To view logs:"
+echo "   docker compose -f docker-compose.prod.yml logs -f"
+echo ""
+echo "🔍 To check service health:"
+echo "   docker compose -f docker-compose.prod.yml ps"

@@ -1,0 +1,184 @@
+version: '3.8'
+
+services:
+  # Reverse Proxy with SSL
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:latest
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginx-certs:/etc/nginx/certs
+      - nginx-vhost:/etc/nginx/vhost.d
+      - nginx-html:/usr/share/nginx/html
+    networks:
+      - proxy-network
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy"
+
+  # SSL Certificate Manager
+  letsencrypt:
+    image: nginxproxy/acme-companion:latest
+    container_name: letsencrypt
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginx-certs:/etc/nginx/certs
+      - nginx-vhost:/etc/nginx/vhost.d
+      - nginx-html:/usr/share/nginx/html
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+    networks:
+      - proxy-network
+
+  # Database
+  database:
+    image: mysql:8.0
+    container_name: eagle-database
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d
+    networks:
+      - app-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: eagle-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
+  # Laravel Backend
+  backend:
+    build:
+      context: ../eagle
+      dockerfile: Dockerfile
+    container_name: eagle-backend
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=https://api.leython.com
+      - DB_CONNECTION=mysql
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PORT=6379
+      - MAIL_MAILER=smtp
+      - MAIL_HOST=postal
+      - MAIL_PORT=25
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_ENCRYPTION=null
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - backend-storage:/var/www/html/storage
+      - backend-logs:/var/www/html/storage/logs
+    networks:
+      - proxy-network
+      - app-network
+    depends_on:
+      - database
+      - redis
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy"
+      - "nginx-proxy.host=api.leython.com"
+      - "nginx-proxy.port=80"
+
+  # Laravel Queue Worker
+  worker:
+    build:
+      context: ../eagle
+      dockerfile: Dockerfile
+    container_name: eagle-worker
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=https://api.leython.com
+      - DB_CONNECTION=mysql
+      - DB_HOST=database
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PORT=6379
+      - MAIL_MAILER=smtp
+      - MAIL_HOST=postal
+      - MAIL_PORT=25
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_ENCRYPTION=null
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - backend-storage:/var/www/html/storage
+      - backend-logs:/var/www/html/storage/logs
+    networks:
+      - app-network
+    depends_on:
+      - database
+      - redis
+    command: php artisan queue:work --verbose --tries=3 --timeout=90
+
+  # Vue.js Frontend
+  frontend:
+    build:
+      context: ../eagle-front
+      dockerfile: Dockerfile
+    container_name: eagle-frontend
+    restart: unless-stopped
+    environment:
+      - VUE_APP_API_BASE_URL=https://api.leython.com
+      - VUE_APP_APP_URL=https://app.leython.com
+    networks:
+      - proxy-network
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy"
+      - "nginx-proxy.host=app.leython.com"
+      - "nginx-proxy.port=80"
+
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  backend-storage:
+    driver: local
+  backend-logs:
+    driver: local
+  nginx-certs:
+    driver: local
+  nginx-vhost:
+    driver: local
+  nginx-html:
+    driver: local
+
+networks:
+  proxy-network:
+    driver: bridge
+  app-network:
+    driver: bridge

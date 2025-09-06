@@ -4,7 +4,7 @@
 
 ```bash
 # Download and run the setup script
-curl -fsSL https://raw.githubusercontent.com/yourusername/eagle-email-platform/main/infra/ubuntu-setup.sh | bash -s https://github.com/yourusername/eagle-email-platform.git
+curl -fsSL https://raw.githubusercontent.com/Abdoximo/infra/main/ubuntu-setup.sh | bash
 ```
 
 ## 📋 **Manual Setup (Step by Step)**
@@ -17,11 +17,11 @@ ssh user@your-server-ip
 ### **2. Run Setup Script**
 ```bash
 # Download setup script
-wget https://raw.githubusercontent.com/yourusername/eagle-email-platform/main/infra/ubuntu-setup.sh
+wget https://raw.githubusercontent.com/Abdoximo/infra/main/ubuntu-setup.sh
 chmod +x ubuntu-setup.sh
 
-# Run setup (replace with your repo URL)
-./ubuntu-setup.sh https://github.com/yourusername/eagle-email-platform.git
+# Run setup
+./ubuntu-setup.sh
 ```
 
 ### **3. Configure DNS**

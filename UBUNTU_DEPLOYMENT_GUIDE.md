@@ -108,7 +108,7 @@ sudo ufw allow 443/tcp
 sudo ufw status
 ```
 
-### **Step 5: Clone Repository**
+### **Step 5: Clone Repositories**
 
 ```bash
 # Create application directory
@@ -118,11 +118,20 @@ sudo chown eagle:eagle /opt/eagle-platform
 # Switch to eagle user
 sudo su - eagle
 
-# Clone repository (replace with your actual repo URL)
-git clone https://github.com/yourusername/eagle-email-platform.git /opt/eagle-platform
+# Clone all repositories
+cd /opt/eagle-platform
 
-# Navigate to project
-cd /opt/eagle-platform/infra
+# Clone backend repository
+git clone https://github.com/Abdoximo/eagle-backend.git backend
+
+# Clone frontend repository
+git clone https://github.com/Abdoximo/eagle-front.git frontend
+
+# Clone infrastructure repository
+git clone https://github.com/Abdoximo/infra.git infra
+
+# Navigate to infrastructure directory
+cd infra
 ```
 
 ### **Step 6: Configure Environment**

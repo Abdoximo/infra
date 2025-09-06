@@ -12,18 +12,26 @@ This directory contains the production infrastructure configuration for the Eagl
 
 ## Quick Start
 
-1. **Configure Environment**
+1. **Clone Repositories**
+   ```bash
+   git clone https://github.com/Abdoximo/eagle-backend.git backend
+   git clone https://github.com/Abdoximo/eagle-front.git frontend
+   git clone https://github.com/Abdoximo/infra.git infra
+   cd infra
+   ```
+
+2. **Configure Environment**
    ```bash
    cp production.env .env
    # Edit .env with your actual values
    ```
 
-2. **Deploy**
+3. **Deploy**
    ```bash
    docker-compose -f docker-compose.prod.yml up -d --build
    ```
 
-3. **Initialize Laravel**
+4. **Initialize Laravel**
    ```bash
    docker-compose -f docker-compose.prod.yml exec backend php artisan key:generate
    docker-compose -f docker-compose.prod.yml exec backend php artisan migrate --force

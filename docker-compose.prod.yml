@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Reverse Proxy with SSL
   nginx-proxy:
@@ -65,7 +63,7 @@ services:
   # Laravel Backend
   backend:
     build:
-      context: ../eagle
+      context: ../backend
       dockerfile: Dockerfile
     container_name: eagle-backend
     restart: unless-stopped
@@ -108,7 +106,7 @@ services:
   # Laravel Queue Worker
   worker:
     build:
-      context: ../eagle
+      context: ../backend
       dockerfile: Dockerfile
     container_name: eagle-worker
     restart: unless-stopped
@@ -147,7 +145,7 @@ services:
   # Vue.js Frontend
   frontend:
     build:
-      context: ../eagle-front
+      context: ../frontend
       dockerfile: Dockerfile
     container_name: eagle-frontend
     restart: unless-stopped

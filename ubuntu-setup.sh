@@ -109,21 +109,22 @@ sudo chown $USER:$USER /opt/eagle-platform
 print_status "Setting up application..."
 cd /opt/eagle-platform
 
-# Check if repository URL is provided
-if [ -z "$1" ]; then
-    print_warning "No repository URL provided. Please provide your Git repository URL:"
-    echo "Usage: $0 <repository-url>"
-    echo "Example: $0 https://github.com/yourusername/eagle-email-platform.git"
-    exit 1
-fi
+print_status "Cloning repositories..."
 
-REPO_URL=$1
+# Clone backend repository
+print_status "Cloning backend repository..."
+git clone https://github.com/Abdoximo/eagle-backend.git backend
 
-print_status "Cloning repository from $REPO_URL..."
-git clone $REPO_URL .
+# Clone frontend repository
+print_status "Cloning frontend repository..."
+git clone https://github.com/Abdoximo/eagle-front.git frontend
+
+# Clone infrastructure repository
+print_status "Cloning infrastructure repository..."
+git clone https://github.com/Abdoximo/infra.git infra
 
 if [ ! -d "infra" ]; then
-    print_error "Repository structure is incorrect. Please ensure the repository contains an 'infra' directory."
+    print_error "Infrastructure repository clone failed."
     exit 1
 fi
 
